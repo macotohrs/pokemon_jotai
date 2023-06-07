@@ -1,10 +1,18 @@
-import { useEffect } from "react";
+import { Suspense } from "react";
 import "./App.css";
 import { atom, Provider, useAtom } from "jotai";
 
 const URL ="https://gist.githubusercontent.com/jherr/23ae3f96cf5ac341c98cd9aa164d2fe3/raw/f8d792f5b2cf97eaaf9f0c2119918f333e348823/pokemon.json";
-const pokemonAtom = atom([]);
 const filterAtom = atom("");
+
+export const pokemonAtom = atom(async () =>
+fetch(URL).then((resp) => resp.json())
+);
+export const filteredPokemonAtom = atom((get) =>
+get(pokemonAtom).filter((p) =>
+  p.name.english.toLowerCase().includes(get(filterAtom).toLowerCase())
+)
+);
 
 const FilterInput = () => {
   const [filter, filterSet] = useAtom(filterAtom); // useStateみたいなもの top level においてはいけない
@@ -14,7 +22,7 @@ const FilterInput = () => {
 
 const PokemonTable = () => { // ReactコンポーネントやカスタムReactフック内でuseAtomを使用する場合、関数名は大文字
   const [pokemon] = useAtom(pokemonAtom); 
-  const [filter, filterSet] = useAtom(filterAtom);
+  const [filter] = useAtom(filterAtom);
 
   return (
     <table width={"100%"}>
@@ -33,13 +41,6 @@ const PokemonTable = () => { // ReactコンポーネントやカスタムReact�
 };
 
 function App() {
-  const [pokemon, pokemonSet] = useAtom(pokemonAtom);
-  useEffect(()=>{
-    fetch(URL)
-    .then(resp => resp.json())
-    .then(pokemonSet)
-  },[])
-  
   return (
     <div className="App">
       <FilterInput />
@@ -50,6 +51,8 @@ function App() {
 
 export default () => (
   <Provider>
-    <App />
+    <Suspense fallback={<div>Loading...</div>}>
+      <App />
+    </Suspense>
   </Provider>
 );
